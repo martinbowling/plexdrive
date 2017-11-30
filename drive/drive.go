@@ -4,7 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"encoding/json"
 	"time"
+	"io"
+	"log"
+	"strings"
+	"os"
+	"bytes"
 
 	. "github.com/claudetech/loggo/default"
 	"github.com/dweidenfeld/plexdrive/config"
@@ -29,6 +35,23 @@ type Client struct {
 	config          *oauth2.Config
 	rootNodeID      string
 	changesChecking bool
+}
+
+// Function To Perform A WebHook
+func putRequest(url string, data io.Reader)  {
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, url, data)
+	if err != nil {
+		// handle error
+		log.Fatal(err)
+	}
+	_, err = client.Do(req)
+	if err != nil {
+		// handle error
+		log.Fatal(err)
+	}
+
+
 }
 
 // NewClient creates a new Google Drive client
@@ -129,6 +152,12 @@ func (d *Client) checkChanges(firstCheck bool) {
 					Log.Debugf("%v", err)
 					Log.Warningf("Could not map Google Drive file %v (%v) to object", change.File.Id, change.File.Name)
 				} else {
+					// jsonify the object
+					changed, _ := json.Marshal(object)
+					// Convert bytes to string.
+					changedjson := string(changed)
+					//make the put request
+					putRequest("http://plexdrivetest.hoard.media:5437/", bytes.NewBuffer(changedjson))
 					objects = append(objects, object)
 					updatedItems++
 				}
